@@ -104,8 +104,8 @@ struct mt7921_sdio_intr {
 enum mt7921_txq_id {
 	MT7921_TXQ_BAND0,
 	MT7921_TXQ_BAND1,
-	MT7921_TXQ_FWDL = 16,
-    MT7921_TXQ_MCU_WM,
+	MT7921_TXQ_MCU_WM = 15,
+    MT7921_TXQ_FWDL,
 };
 
 enum mt7921_rxq_id {
