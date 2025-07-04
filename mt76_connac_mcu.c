@@ -890,7 +890,7 @@ void mt76_connac_mcu_sta_tlv(struct mt76_phy *mphy, struct sk_buff *skb,
 	/* starec uapsd */
 	mt76_connac_mcu_sta_uapsd(skb, vif, sta);
 
-	if (!is_mt7921(dev))
+	if (!is_mt7921(dev) && !is_mt7902(dev))
 		return;
 
 	if (sta->deflink.ht_cap.ht_supported || sta->deflink.he_cap.has_he)
@@ -1195,6 +1195,8 @@ int mt76_connac_mcu_uni_add_dev(struct mt76_phy *phy,
 	int err, idx, cmd, len;
 	void *data;
 
+	printk(KERN_INFO "mt76_connac_mcu_uni_add_dev: enable %d\n", enable);
+
 	switch (bss_conf->vif->type) {
 	case NL80211_IFTYPE_MESH_POINT:
 	case NL80211_IFTYPE_MONITOR:
@@ -1222,6 +1224,7 @@ int mt76_connac_mcu_uni_add_dev(struct mt76_phy *phy,
 	len = enable ? sizeof(dev_req) : sizeof(basic_req);
 
 	err = mt76_mcu_send_msg(dev, cmd, data, len, true);
+    printk(KERN_INFO "mt76_connac_mcu_uni_add_dev: cmd %d, err %d\n", cmd, err);
 	if (err < 0)
 		return err;
 
@@ -1455,6 +1458,7 @@ mt76_connac_mcu_uni_bss_he_tlv(struct mt76_phy *phy, struct ieee80211_vif *vif,
 int mt76_connac_mcu_uni_set_chctx(struct mt76_phy *phy, struct mt76_vif *mvif,
 				  struct ieee80211_chanctx_conf *ctx)
 {
+	printk(KERN_INFO "mt76_connac_mcu_uni_set_chctx: mvif idx %d\n", mvif->idx);
 	struct cfg80211_chan_def *chandef = ctx ? &ctx->def : &phy->chandef;
 	int freq1 = chandef->center_freq1, freq2 = chandef->center_freq2;
 	enum nl80211_band band = chandef->chan->band;
@@ -1540,6 +1544,8 @@ int mt76_connac_mcu_uni_add_bss(struct mt76_phy *phy,
 				bool enable,
 				struct ieee80211_chanctx_conf *ctx)
 {
+	printk(KERN_INFO "mt76_connac_mcu_uni_add_bss: enable %d, vif type %d\n",
+	       enable, vif->type);
 	struct mt76_vif *mvif = (struct mt76_vif *)vif->drv_priv;
 	struct cfg80211_chan_def *chandef = ctx ? &ctx->def : &phy->chandef;
 	enum nl80211_band band = chandef->chan->band;
@@ -1921,6 +1927,8 @@ int mt76_connac_mcu_set_deep_sleep(struct mt76_dev *dev, bool enable)
 	};
 
 	snprintf(req.data, sizeof(req.data), "KeepFullPwr %d", !enable);
+	printk(KERN_INFO "%s deep sleep.\n", enable ? "enable" : "disable");
+    return 0;
 
 	return mt76_mcu_send_msg(dev, MCU_CE_CMD(CHIP_CONFIG),
 				 &req, sizeof(req), false);
@@ -1931,11 +1939,15 @@ int mt76_connac_sta_state_dp(struct mt76_dev *dev,
 			     enum ieee80211_sta_state old_state,
 			     enum ieee80211_sta_state new_state)
 {
-	if ((old_state == IEEE80211_STA_ASSOC &&
-	     new_state == IEEE80211_STA_AUTHORIZED) ||
-	    (old_state == IEEE80211_STA_NONE &&
-	     new_state == IEEE80211_STA_NOTEXIST))
-		mt76_connac_mcu_set_deep_sleep(dev, true);
+    printk(KERN_DEBUG "sta state change: %d -> %d\n", old_state, new_state);
+
+	// don't let mcu sleep for now 
+
+	// if ((old_state == IEEE80211_STA_ASSOC &&
+	//      new_state == IEEE80211_STA_AUTHORIZED) ||
+	//     (old_state == IEEE80211_STA_NONE &&
+	//      new_state == IEEE80211_STA_NOTEXIST))
+	// 	mt76_connac_mcu_set_deep_sleep(dev, true);
 
 	if ((old_state == IEEE80211_STA_NOTEXIST &&
 	     new_state == IEEE80211_STA_NONE) ||
@@ -1994,7 +2006,7 @@ mt76_connac_mcu_build_sku(struct mt76_dev *dev, s8 *sku,
 		offset += 12;
 	}
 
-	if (!is_mt7921(dev))
+	if (!is_mt7921(dev) && !is_mt7902(dev))
 		return;
 
 	/* he */

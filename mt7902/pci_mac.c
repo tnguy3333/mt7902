@@ -56,6 +56,7 @@ int mt7921e_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 int mt7921e_mac_reset(struct mt792x_dev *dev)
 {
 	int i, err;
+	printk(KERN_INFO "mt7921e_mac_reset\n");
 
 	mt792xe_mcu_drv_pmctrl(dev);
 
@@ -97,22 +98,27 @@ int mt7921e_mac_reset(struct mt792x_dev *dev)
 	mt76_wr(dev, MT_PCIE_MAC_INT_ENABLE, 0xff);
 
 	err = mt7921e_driver_own(dev);
+	printk(KERN_INFO "mt7921e_mac_reset: driver_own, ret=%d\n", err);
 	if (err)
 		goto out;
 
 	err = mt7921_run_firmware(dev);
+	printk(KERN_INFO "mt7921e_mac_reset: run_firmware, ret=%d\n", err);
 	if (err)
 		goto out;
 
 	err = mt7921_mcu_set_eeprom(dev);
+	printk(KERN_INFO "mt7921e_mac_reset: set_eeprom, ret=%d\n", err);
 	if (err)
 		goto out;
 
 	err = mt7921_mac_init(dev);
+	printk(KERN_INFO "mt7921e_mac_reset: mac_init, ret=%d\n", err);
 	if (err)
 		goto out;
 
 	err = __mt7921_start(&dev->phy);
+	printk(KERN_INFO "mt7921e_mac_reset: start, ret=%d\n", err);
 out:
 
 	local_bh_disable();

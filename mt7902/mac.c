@@ -646,13 +646,22 @@ mt7921_vif_connect_iter(void *priv, u8 *mac,
 	if (vif->type == NL80211_IFTYPE_STATION)
 		ieee80211_disconnect(vif, true);
 
-	mt76_connac_mcu_uni_add_dev(&dev->mphy, &vif->bss_conf,
-				    &mvif->sta.deflink.wcid, true);
+	// u32 ret = mt76_connac_mcu_uni_add_dev(&dev->mphy, &vif->bss_conf,
+	// 			    &mvif->sta.deflink.wcid, true);
+
+	u32 ret = mt7921_mcu_add_dev_info(&dev->mphy, &vif->bss_conf, &mvif->bss_conf.mt76,
+					  true);
+
+    printk(KERN_DEBUG "vif_connect_iter: ADD DEV INFO ret = %d\n", ret);
+
 	mt7921_mcu_set_tx(dev, vif);
 
 	if (vif->type == NL80211_IFTYPE_AP) {
-		mt76_connac_mcu_uni_add_bss(dev->phy.mt76, vif, &mvif->sta.deflink.wcid,
-					    true, NULL);
+		// mt76_connac_mcu_uni_add_bss(dev->phy.mt76, vif, &mvif->sta.deflink.wcid,
+		// 			    true, NULL);
+		u32 ret = mt7921_mcu_add_bss_info(mvif->phy, vif, &mvif->bss_conf.mt76,
+			true);
+        printk(KERN_DEBUG "vif_connect_iter: mt7921_mcu_add_bss_info ret = %d\n", ret);
 		mt7921_mcu_sta_update(dev, NULL, vif, true,
 				      MT76_STA_INFO_STATE_NONE);
 		mt7921_mcu_uni_add_beacon_offload(dev, hw, vif, true);
@@ -669,6 +678,7 @@ void mt7921_mac_reset_work(struct work_struct *work)
 	int i, ret;
 
 	dev_dbg(dev->mt76.dev, "chip reset\n");
+	printk(KERN_INFO "mt7921: chip reset\n");
 	set_bit(MT76_RESET, &dev->mphy.state);
 	dev->hw_full_reset = true;
 	ieee80211_stop_queues(hw);
@@ -849,7 +859,7 @@ bool mt7921_usb_sdio_tx_status_data(struct mt76_dev *mdev, u8 *update)
 }
 EXPORT_SYMBOL_GPL(mt7921_usb_sdio_tx_status_data);
 
-#if IS_ENABLED(CONFIG_IPV6)
+#if IS_ENABLED(CONFIG_IPV62)
 void mt7921_set_ipv6_ns_work(struct work_struct *work)
 {
 	struct mt792x_dev *dev = container_of(work, struct mt792x_dev,

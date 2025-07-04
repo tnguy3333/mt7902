@@ -58,6 +58,8 @@ int mt76_mcu_send_and_get_msg(struct mt76_dev *dev, int cmd, const void *data,
 {
 	struct sk_buff *skb;
 
+	printk(KERN_DEBUG "%s: cmd=0x%x, len=%d, wait_resp=%d\n", __func__, cmd, len, wait_resp);
+
 	if (dev->mcu_ops->mcu_send_msg)
 		return dev->mcu_ops->mcu_send_msg(dev, cmd, data, len, wait_resp);
 

@@ -329,4 +329,6 @@ int mt7921_mcu_abort_roc(struct mt792x_phy *phy, struct mt792x_vif *vif,
 			 u8 token_id);
 void mt7921_roc_abort_sync(struct mt792x_dev *dev);
 int mt7921_mcu_set_rssimonitor(struct mt792x_dev *dev, struct ieee80211_vif *vif);
+int mt7921_mcu_add_dev_info(struct mt76_phy *phy, struct ieee80211_bss_conf *bss_conf, struct mt76_vif *mvif, bool enable);
+int mt7921_mcu_add_bss_info(struct mt792x_phy *phy, struct ieee80211_vif *vif, struct mt76_vif *mvif, int enable);
 #endif

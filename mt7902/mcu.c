@@ -90,7 +90,7 @@ static int mt7921_mcu_read_eeprom(struct mt792x_dev *dev, u32 offset, u8 *val)
 	return 0;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM2
 
 static int
 mt7921_mcu_set_ipv6_ns_filter(struct mt76_dev *dev,
@@ -120,7 +120,7 @@ mt7921_mcu_set_ipv6_ns_filter(struct mt76_dev *dev,
 
 void mt7921_mcu_set_suspend_iter(void *priv, u8 *mac, struct ieee80211_vif *vif)
 {
-	if (IS_ENABLED(CONFIG_IPV6)) {
+	if (IS_ENABLED(CONFIG_IPV62)) {
 		struct mt76_phy *phy = priv;
 
 		mt7921_mcu_set_ipv6_ns_filter(phy->dev, vif,
@@ -389,7 +389,7 @@ int mt7921_mcu_uni_tx_ba(struct mt792x_dev *dev,
 		msta->deflink.wcid.amsdu = false;
 
 	return mt76_connac_mcu_sta_ba(&dev->mt76, &msta->vif->bss_conf.mt76, params,
-				      MCU_UNI_CMD(STA_REC_UPDATE),
+				      MCU_EXT_CMD(STA_REC_UPDATE),
 				      enable, true);
 }
 
@@ -400,7 +400,7 @@ int mt7921_mcu_uni_rx_ba(struct mt792x_dev *dev,
 	struct mt792x_sta *msta = (struct mt792x_sta *)params->sta->drv_priv;
 
 	return mt76_connac_mcu_sta_ba(&dev->mt76, &msta->vif->bss_conf.mt76, params,
-				      MCU_UNI_CMD(STA_REC_UPDATE),
+				      MCU_EXT_CMD(STA_REC_UPDATE),
 				      enable, false);
 }
 
@@ -625,20 +625,85 @@ int mt7921_mcu_fw_log_2_host(struct mt792x_dev *dev, u8 ctrl)
 				 &data, sizeof(data), false);
 }
 
+static int
+mt7902_firmware_state(struct mt792x_dev *dev, bool wa)
+{
+	u32 state = FIELD_PREP(MT_TOP_MISC_FW_STATE,
+			       wa ? FW_STATE_RDY : FW_STATE_FW_DOWNLOAD);
+
+	if (!mt76_poll_msec(dev, MT_TOP_MISC, MT_TOP_MISC_FW_STATE,
+			    state, 1000)) {
+		dev_err(dev->mt76.dev, "Timeout for initializing firmware\n");
+		return -EIO;
+	}
+	return 0;
+}
+
+static int mt7902_load_firmware(struct mt792x_dev *dev)
+{
+	int ret;
+    
+    /* make sure fw is download state */
+	if (mt7902_firmware_state(dev, false)) {
+		/* restart firmware once */
+		mt76_connac_mcu_restart(&dev->mt76);
+		ret = mt7902_firmware_state(dev, false);
+		if (ret) {
+			dev_err(dev->mt76.dev,
+				"Firmware is not ready for download\n");
+			return ret;
+		}
+	}
+
+	ret = mt76_connac2_load_patch(&dev->mt76, mt792x_patch_name(dev));
+	if (ret)
+		return ret;
+
+	if (mt76_is_sdio(&dev->mt76)) {
+		/* activate again */
+		ret = __mt792x_mcu_fw_pmctrl(dev);
+		if (!ret)
+			ret = __mt792x_mcu_drv_pmctrl(dev);
+	}
+
+	ret = mt76_connac2_load_ram(&dev->mt76, mt792x_ram_name(dev), NULL);
+	if (ret)
+		return ret;
+
+	if (!mt76_poll_msec(dev, MT_CONN_ON_MISC, MT_TOP_MISC2_FW_N9_RDY,
+			    MT_TOP_MISC2_FW_N9_RDY, 1500)) {
+		dev_err(dev->mt76.dev, "Timeout for initializing firmware\n");
+
+		return -EIO;
+	}
+
+#ifdef CONFIG_PM2
+	dev->mt76.hw->wiphy->wowlan = &mt76_connac_wowlan_support;
+#endif /* CONFIG_PM */
+
+	dev_dbg(dev->mt76.dev, "Firmware init done\n");
+
+	return 0;
+}
+
 int mt7921_run_firmware(struct mt792x_dev *dev)
 {
 	int err;
+	printk(KERN_INFO "run_firmware: start\n");
 
-	err = mt792x_load_firmware(dev);
+	err = mt7902_load_firmware(dev);
+	printk(KERN_INFO "run_firmware: firmware loaded, ret=%d\n", err);
 	if (err)
 		return err;
 
 	err = mt7921_mcu_get_nic_capability(&dev->phy);
+	printk(KERN_INFO "run_firmware: get_nic_capability, ret=%d\n", err);
 	if (err)
 		return err;
 
 	set_bit(MT76_STATE_MCU_RUNNING, &dev->mphy.state);
 	err = mt7921_load_clc(dev, mt792x_ram_name(dev));
+	printk(KERN_INFO "run_firmware: load_clc, ret=%d\n", err);
 	if (err)
 		return err;
 
@@ -921,6 +986,8 @@ int mt7921_mcu_set_eeprom(struct mt792x_dev *dev)
 		.format = EE_FORMAT_WHOLE,
 	};
 
+	printk(KERN_INFO "mt7921_mcu_set_eeprom\n");
+
 	return mt76_mcu_send_msg(&dev->mt76, MCU_EXT_CMD(EFUSE_BUFFER_MODE),
 				 &req, sizeof(req), true);
 }
@@ -928,6 +995,7 @@ EXPORT_SYMBOL_GPL(mt7921_mcu_set_eeprom);
 
 int mt7921_mcu_uni_bss_ps(struct mt792x_dev *dev, struct ieee80211_vif *vif)
 {
+	printk(KERN_INFO "mt7921_mcu_uni_bss_ps\n");
 	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 	struct {
 		struct {
@@ -967,6 +1035,7 @@ static int
 mt7921_mcu_uni_bss_bcnft(struct mt792x_dev *dev, struct ieee80211_vif *vif,
 			 bool enable)
 {
+	printk(KERN_INFO "mt7921_mcu_uni_bss_bcnft\n");
 	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 	struct {
 		struct {
@@ -1047,7 +1116,7 @@ int mt7921_mcu_sta_update(struct mt792x_dev *dev, struct ieee80211_sta *sta,
 		.sta = sta,
 		.vif = vif,
 		.enable = enable,
-		.cmd = MCU_UNI_CMD(STA_REC_UPDATE),
+		.cmd = MCU_EXT_CMD(STA_REC_UPDATE),
 		.state = state,
 		.offload_fw = true,
 		.rcpi = to_rcpi(rssi),
@@ -1070,13 +1139,14 @@ int mt7921_mcu_set_beacon_filter(struct mt792x_dev *dev,
 	int err;
 
 	if (enable) {
-		err = mt7921_mcu_uni_bss_bcnft(dev, vif, true);
+		//err = mt7921_mcu_uni_bss_bcnft(dev, vif, true);
 		if (err)
 			return err;
 
 		err = mt7921_mcu_set_rxfilter(dev, 0,
 					      MT7921_FIF_BIT_SET,
 					      MT_WF_RFCR_DROP_OTHER_BEACON);
+        printk(KERN_INFO "mt7921_mcu_set_beacon_filter: set_rxfilter ret: %d\n", err);
 		if (err)
 			return err;
 
@@ -1084,12 +1154,14 @@ int mt7921_mcu_set_beacon_filter(struct mt792x_dev *dev,
 	}
 
 	err = mt7921_mcu_set_bss_pm(dev, vif, false);
+    printk(KERN_INFO "mt7921_mcu_set_beacon_filter: set_bss_pm ret: %d\n", err);
 	if (err)
 		return err;
 
 	err = mt7921_mcu_set_rxfilter(dev, 0,
 				      MT7921_FIF_BIT_CLR,
 				      MT_WF_RFCR_DROP_OTHER_BEACON);
+    printk(KERN_INFO "mt7921_mcu_set_beacon_filter: set_rxfilter ret: %d\n", err);
 	if (err)
 		return err;
 
@@ -1223,6 +1295,7 @@ mt7921_mcu_uni_add_beacon_offload(struct mt792x_dev *dev,
 				  struct ieee80211_vif *vif,
 				  bool enable)
 {
+	printk(KERN_INFO "mt7921_mcu_uni_add_beacon_offload\n");
 	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 	struct mt76_wcid *wcid = &dev->mt76.global_wcid;
 	struct ieee80211_mutable_offsets offs;
@@ -1465,4 +1538,313 @@ int mt7921_mcu_set_rssimonitor(struct mt792x_dev *dev, struct ieee80211_vif *vif
 
 	return mt76_mcu_send_msg(&dev->mt76, MCU_CE_CMD(RSSI_MONITOR),
 				 &data, sizeof(data), false);
+}
+
+int mt7921_mcu_add_dev_info(struct mt76_phy *phy,
+			    struct ieee80211_bss_conf *bss_conf,
+                struct mt76_vif *mvif, bool enable)
+{
+	struct mt76_dev *dev = phy->dev;
+	struct {
+		struct req_hdr { 
+			u8 omac_idx;
+			u8 band_idx;
+			__le16 tlv_num;
+			u8 is_tlv_append;
+			u8 rsv[3];
+		} __packed hdr;
+		struct req_tlv {
+			__le16 tag;
+			__le16 len;
+			u8 active;
+			u8 band_idx;
+			u8 omac_addr[ETH_ALEN];
+		} __packed tlv;
+	} data = {
+		.hdr = {
+			.omac_idx = mvif->omac_idx,
+			.band_idx = mvif->band_idx,
+			.tlv_num = cpu_to_le16(1),
+			.is_tlv_append = 1,
+		},
+		.tlv = {
+			.tag = cpu_to_le16(DEV_INFO_ACTIVE),
+			.len = cpu_to_le16(sizeof(struct req_tlv)),
+			.active = enable,
+			.band_idx = mvif->band_idx,
+		},
+	};
+
+    printk(KERN_INFO "mt7921: adding device info for OMAC %d, band %d, active %d\n",
+       mvif->omac_idx, mvif->band_idx, enable);
+
+    memcpy(data.tlv.omac_addr, bss_conf->addr, ETH_ALEN);
+
+	// u32 err = mt76_mcu_send_msg(dev, MCU_EXT_CMD(DEV_INFO_UPDATE),
+	// 			 &data, sizeof(data), true);
+    // printk(KERN_DEBUG "(1) add_dev_info: cmd 0x%x, err %d\n", MCU_EXT_CMD(DEV_INFO_UPDATE), err);
+
+	return mt76_mcu_send_msg(dev, MCU_EXT_CMD(DEV_INFO_UPDATE),
+				 &data, sizeof(data), true);
+}
+
+/** bss info **/
+struct mt7921_he_obss_narrow_bw_ru_data {
+	bool tolerated;
+};
+
+static void mt7921_check_he_obss_narrow_bw_ru_iter(struct wiphy *wiphy,
+						   struct cfg80211_bss *bss,
+						   void *_data)
+{
+	struct mt7921_he_obss_narrow_bw_ru_data *data = _data;
+	const struct element *elem;
+
+	rcu_read_lock();
+	elem = ieee80211_bss_get_elem(bss, WLAN_EID_EXT_CAPABILITY);
+
+	if (!elem || elem->datalen <= 10 ||
+	    !(elem->data[10] &
+	      WLAN_EXT_CAPA10_OBSS_NARROW_BW_RU_TOLERANCE_SUPPORT))
+		data->tolerated = false;
+
+	rcu_read_unlock();
+}
+
+static bool mt7921_check_he_obss_narrow_bw_ru(struct ieee80211_hw *hw,
+					      struct ieee80211_vif *vif)
+{
+	struct mt7921_he_obss_narrow_bw_ru_data iter_data = {
+		.tolerated = true,
+	};
+
+	if (!(vif->bss_conf.chanreq.oper.chan->flags & IEEE80211_CHAN_RADAR))
+		return false;
+
+	cfg80211_bss_iter(hw->wiphy, &vif->bss_conf.chanreq.oper,
+			  mt7921_check_he_obss_narrow_bw_ru_iter,
+			  &iter_data);
+
+	/*
+	 * If there is at least one AP on radar channel that cannot
+	 * tolerate 26-tone RU UL OFDMA transmissions using HE TB PPDU.
+	 */
+	return !iter_data.tolerated;
+}
+
+static void
+mt7921_mcu_bss_rfch_tlv(struct sk_buff *skb, struct ieee80211_vif *vif,
+			struct mt792x_phy *phy)
+{
+	struct cfg80211_chan_def *chandef = &phy->mt76->chandef;
+	struct bss_info_rf_ch *ch;
+	struct tlv *tlv;
+	int freq1 = chandef->center_freq1;
+
+	tlv = mt76_connac_mcu_add_tlv(skb, BSS_INFO_RF_CH, sizeof(*ch));
+
+	ch = (struct bss_info_rf_ch *)tlv;
+	ch->pri_ch = chandef->chan->hw_value;
+	ch->center_ch0 = ieee80211_frequency_to_channel(freq1);
+	ch->bw = mt76_connac_chan_bw(chandef);
+
+	if (chandef->width == NL80211_CHAN_WIDTH_80P80) {
+		int freq2 = chandef->center_freq2;
+
+		ch->center_ch1 = ieee80211_frequency_to_channel(freq2);
+	}
+
+	if (vif->bss_conf.he_support && vif->type == NL80211_IFTYPE_STATION) {
+        struct mt76_phy *mphy = phy->mt76;
+
+		ch->he_ru26_block =
+			mt7921_check_he_obss_narrow_bw_ru(mphy->hw, vif);
+		ch->he_all_disable = false;
+	} else {
+		ch->he_all_disable = true;
+	}
+}
+
+static void
+mt7921_mcu_bss_ra_tlv(struct sk_buff *skb, struct ieee80211_vif *vif,
+		      struct mt792x_phy *phy)
+{
+	int max_nss = hweight8(phy->mt76->antenna_mask);
+	struct bss_info_ra *ra;
+	struct tlv *tlv;
+
+	tlv = mt76_connac_mcu_add_tlv(skb, BSS_INFO_RA, sizeof(*ra));
+
+	ra = (struct bss_info_ra *)tlv;
+	ra->op_mode = vif->type == NL80211_IFTYPE_AP;
+	ra->adhoc_en = vif->type == NL80211_IFTYPE_ADHOC;
+	ra->short_preamble = true;
+	ra->tx_streams = max_nss;
+	ra->rx_streams = max_nss;
+	ra->algo = 4;
+	ra->train_up_rule = 2;
+	ra->train_up_high_thres = 110;
+	ra->train_up_rule_rssi = -70;
+	ra->low_traffic_thres = 2;
+	ra->phy_cap = cpu_to_le32(0xfdf);
+	ra->interval = cpu_to_le32(500);
+	ra->fast_interval = cpu_to_le32(100);
+}
+
+static void
+mt7921_mcu_bss_he_tlv(struct sk_buff *skb, struct ieee80211_vif *vif,
+		      struct mt792x_phy *phy)
+{
+#define DEFAULT_HE_PE_DURATION		4
+#define DEFAULT_HE_DURATION_RTS_THRES	1023
+	const struct ieee80211_sta_he_cap *cap;
+	struct bss_info_he *he;
+	struct tlv *tlv;
+
+	cap = mt76_connac_get_he_phy_cap(phy->mt76, vif);
+
+	tlv = mt76_connac_mcu_add_tlv(skb, BSS_INFO_HE_BASIC, sizeof(*he));
+
+	he = (struct bss_info_he *)tlv;
+	he->he_pe_duration = vif->bss_conf.htc_trig_based_pkt_ext;
+	if (!he->he_pe_duration)
+		he->he_pe_duration = DEFAULT_HE_PE_DURATION;
+
+	he->he_rts_thres = cpu_to_le16(vif->bss_conf.frame_time_rts_th);
+	if (!he->he_rts_thres)
+		he->he_rts_thres = cpu_to_le16(DEFAULT_HE_DURATION_RTS_THRES);
+
+	he->max_nss_mcs[CMD_HE_MCS_BW80] = cap->he_mcs_nss_supp.tx_mcs_80;
+	he->max_nss_mcs[CMD_HE_MCS_BW160] = cap->he_mcs_nss_supp.tx_mcs_160;
+	he->max_nss_mcs[CMD_HE_MCS_BW8080] = cap->he_mcs_nss_supp.tx_mcs_80p80;
+}
+
+static void
+mt7921_mcu_bss_hw_amsdu_tlv(struct sk_buff *skb)
+{
+#define TXD_CMP_MAP1		GENMASK(15, 0)
+#define TXD_CMP_MAP2		(GENMASK(31, 0) & ~BIT(23))
+	struct bss_info_hw_amsdu *amsdu;
+	struct tlv *tlv;
+
+	tlv = mt76_connac_mcu_add_tlv(skb, BSS_INFO_HW_AMSDU, sizeof(*amsdu));
+
+	amsdu = (struct bss_info_hw_amsdu *)tlv;
+	amsdu->cmp_bitmap_0 = cpu_to_le32(TXD_CMP_MAP1);
+	amsdu->cmp_bitmap_1 = cpu_to_le32(TXD_CMP_MAP2);
+	amsdu->trig_thres = cpu_to_le16(2);
+	amsdu->enable = true;
+}
+
+static void
+mt7921_mcu_bss_bmc_tlv(struct sk_buff *skb, struct mt792x_phy *phy)
+{
+	struct bss_info_bmc_rate *bmc;
+	struct cfg80211_chan_def *chandef = &phy->mt76->chandef;
+	enum nl80211_band band = chandef->chan->band;
+	struct tlv *tlv;
+
+	tlv = mt76_connac_mcu_add_tlv(skb, BSS_INFO_BMC_RATE, sizeof(*bmc));
+
+	bmc = (struct bss_info_bmc_rate *)tlv;
+	if (band == NL80211_BAND_2GHZ) {
+		bmc->short_preamble = true;
+	} else {
+		bmc->bc_trans = cpu_to_le16(0x2000);
+		bmc->mc_trans = cpu_to_le16(0x2080);
+	}
+}
+
+static int
+mt7921_mcu_muar_config(struct mt792x_phy *phy, struct ieee80211_vif *vif,
+		       struct mt76_vif *mvif, bool bssid, bool enable)
+{
+	struct mt792x_dev *dev = phy->dev;
+	//struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
+	u32 idx = mvif->omac_idx - REPEATER_BSSID_START;
+	u32 mask = phy->omac_mask >> 32 & ~BIT(idx);
+	const u8 *addr = vif->addr;
+	struct {
+		u8 mode;
+		u8 force_clear;
+		u8 clear_bitmap[8];
+		u8 entry_count;
+		u8 write;
+		u8 band;
+
+		u8 index;
+		u8 bssid;
+		u8 addr[ETH_ALEN];
+	} __packed req = {
+		.mode = !!mask || enable,
+		.entry_count = 1,
+		.write = 1,
+		.band = phy->mt76->band_idx,
+		.index = idx * 2 + bssid,
+	};
+
+	if (bssid)
+		addr = vif->bss_conf.bssid;
+
+	if (enable)
+		ether_addr_copy(req.addr, addr);
+
+	return mt76_mcu_send_msg(&dev->mt76, MCU_EXT_CMD(MUAR_UPDATE), &req,
+				 sizeof(req), true);
+}
+
+int mt7921_mcu_add_bss_info(struct mt792x_phy *phy,
+                struct ieee80211_vif *vif, struct mt76_vif *mvif, int enable)
+{
+    struct mt792x_vif *mvif2 = (struct mt792x_vif *)vif->drv_priv;
+    struct mt792x_dev *dev = phy->dev;
+    struct sk_buff *skb;
+
+	printk(KERN_INFO "mt7921_mcu_add_bss_info: OMAC %d, enable %d\n",
+		   mvif->omac_idx, enable);
+
+    // Handle repeater BSSID if needed (optional, depending on mt792x support)
+    if (mvif->omac_idx >= REPEATER_BSSID_START) {
+        printk(KERN_INFO "handling repeater BSSID for OMAC %d, enable %d\n",
+               mvif->omac_idx, enable);
+        mt7921_mcu_muar_config(phy, vif, mvif, false, enable);
+        mt7921_mcu_muar_config(phy, vif, mvif, true, enable);
+    }
+
+    skb = __mt76_connac_mcu_alloc_sta_req(&dev->mt76, mvif, NULL,
+                          MT7921_BSS_UPDATE_MAX_SIZE);
+    if (IS_ERR(skb))
+        return PTR_ERR(skb);
+
+    // bss_omac must be first if enabling
+    if (enable)
+        mt76_connac_mcu_bss_omac_tlv(skb, vif);
+
+    mt76_connac_mcu_bss_basic_tlv(skb, vif, NULL, phy->mt76,
+                      mvif2->sta.deflink.wcid.idx, enable);
+
+    if (vif->type == NL80211_IFTYPE_MONITOR)
+        goto out;
+
+    if (enable) {
+        mt7921_mcu_bss_rfch_tlv(skb, vif, phy);
+        mt7921_mcu_bss_bmc_tlv(skb, phy);
+        mt7921_mcu_bss_ra_tlv(skb, vif, phy);
+        mt7921_mcu_bss_hw_amsdu_tlv(skb);
+
+        if (vif->bss_conf.he_support){
+            printk(KERN_INFO "mt7921_mcu_add_bss_info: adding HE TLV\n");
+            mt7921_mcu_bss_he_tlv(skb, vif, phy);
+        }
+
+        if (mvif->omac_idx >= EXT_BSSID_START &&
+            mvif->omac_idx < REPEATER_BSSID_START){
+            printk(KERN_INFO "mt7921_mcu_add_bss_info: adding extended BSS TLV for OMAC %d\n",
+                   mvif->omac_idx);
+            mt76_connac_mcu_bss_ext_tlv(skb, mvif);
+        }
+    }
+out:
+    return mt76_mcu_skb_send_msg(&dev->mt76, skb,
+                     MCU_EXT_CMD(BSS_INFO_UPDATE), true);
 }

@@ -220,20 +220,25 @@ int __mt7921_start(struct mt792x_phy *phy)
 {
 	struct mt76_phy *mphy = phy->mt76;
 	int err;
+	printk(KERN_INFO "mt7921_start\n");
 
 	err = mt76_connac_mcu_set_mac_enable(mphy->dev, 0, true, false);
+	printk(KERN_INFO "mt7921_start: set_mac_enable, ret=%d\n", err);
 	if (err)
 		return err;
 
 	err = mt76_connac_mcu_set_channel_domain(mphy);
+	printk(KERN_INFO "mt7921_start: set_channel_domain, ret=%d\n", err);
 	if (err)
 		return err;
 
 	err = mt7921_mcu_set_chan_info(phy, MCU_EXT_CMD(SET_RX_PATH));
+	printk(KERN_INFO "mt7921_start: set_chan_info, ret=%d\n", err);
 	if (err)
 		return err;
 
 	err = mt7921_set_tx_sar_pwr(mphy->hw, NULL);
+	printk(KERN_INFO "mt7921_start: set_tx_sar_pwr, ret=%d\n", err);
 	if (err)
 		return err;
 
@@ -244,10 +249,12 @@ int __mt7921_start(struct mt792x_phy *phy)
 				     MT792x_WATCHDOG_TIME);
 	if (mt76_is_mmio(mphy->dev)) {
 		err = mt7921_mcu_radio_led_ctrl(phy->dev, EXT_CMD_RADIO_LED_CTRL_ENABLE);
+		printk(KERN_INFO "mt7921_start: radio_led_ctrl, ret=%d\n", err);
 		if (err)
 			return err;
 
 		err = mt7921_mcu_radio_led_ctrl(phy->dev, EXT_CMD_RADIO_ON_LED);
+		printk(KERN_INFO "mt7921_start: radio_on_led, ret=%d\n", err);
 		if (err)
 			return err;
 	}
@@ -293,6 +300,8 @@ mt7921_add_interface(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 	struct mt76_txq *mtxq;
 	int idx, ret = 0;
 
+	printk(KERN_INFO "mt7921_add_interface\n");
+
 	mt792x_mutex_acquire(dev);
 
 	mvif->bss_conf.mt76.idx = __ffs64(~dev->mt76.vif_mask);
@@ -306,9 +315,23 @@ mt7921_add_interface(struct ieee80211_hw *hw, struct ieee80211_vif *vif)
 	mvif->bss_conf.vif = mvif;
 	mvif->bss_conf.mt76.band_idx = 0;
 	mvif->bss_conf.mt76.wmm_idx = mvif->bss_conf.mt76.idx % MT76_CONNAC_MAX_WMM_SETS;
+	
+	printk(KERN_INFO "mt7921: OMAC index = %d, Band index = %d, WMM index = %d, band index = %d, band = %d\n",
+           mvif->bss_conf.mt76.omac_idx,
+           mvif->bss_conf.mt76.band_idx,
+           mvif->bss_conf.mt76.wmm_idx,
+           mvif->phy->mt76->band_idx,
+           mvif->phy->mt76->chandef.chan->band);
 
-	ret = mt76_connac_mcu_uni_add_dev(&dev->mphy, &vif->bss_conf,
-					  &mvif->sta.deflink.wcid, true);
+	// ret = mt76_connac_mcu_uni_add_dev(&dev->mphy, &vif->bss_conf,
+	// 				  &mvif->sta.deflink.wcid, true);
+
+	ret = mt7921_mcu_add_dev_info(&dev->mphy, &vif->bss_conf, &mvif->bss_conf.mt76,
+					  true);
+
+    printk(KERN_DEBUG "add interface: ADD DEV INFO ret = %d\n", ret);
+    
+    //printk(KERN_INFO "mt7921_add_interface: mcu_uni_add_dev, ret=%d\n", ret);
 	if (ret)
 		goto out;
 
@@ -460,6 +483,8 @@ static int mt7921_set_channel(struct mt792x_phy *phy)
 	struct mt792x_dev *dev = phy->dev;
 	int ret;
 
+    printk(KERN_INFO "mt7921_set_channel: start\n");
+
 	cancel_delayed_work_sync(&phy->mt76->mac_work);
 
 	mt792x_mutex_acquire(dev);
@@ -502,12 +527,19 @@ static int mt7921_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 	/* The hardware does not support per-STA RX GTK, fallback
 	 * to software mode for these.
 	 */
-	if ((vif->type == NL80211_IFTYPE_ADHOC ||
-	     vif->type == NL80211_IFTYPE_MESH_POINT) &&
-	    (key->cipher == WLAN_CIPHER_SUITE_TKIP ||
-	     key->cipher == WLAN_CIPHER_SUITE_CCMP) &&
-	    !(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
+	// if ((vif->type == NL80211_IFTYPE_ADHOC ||
+	//      vif->type == NL80211_IFTYPE_MESH_POINT) &&
+	//     (key->cipher == WLAN_CIPHER_SUITE_TKIP ||
+	//      key->cipher == WLAN_CIPHER_SUITE_CCMP) &&
+	//     !(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
+	// 	return -EOPNOTSUPP;
+
+
+	// Rely on software decryption for now
+	if (key->cipher == WLAN_CIPHER_SUITE_CCMP){
+		printk(KERN_INFO "Setting key: Returning not supp for PTK/GTK\n");
 		return -EOPNOTSUPP;
+	}
 
 	/* fall back to sw encryption for unsupported ciphers */
 	switch (key->cipher) {
@@ -543,7 +575,7 @@ static int mt7921_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 
 	mt76_wcid_key_setup(&dev->mt76, wcid, key);
 	err = mt76_connac_mcu_add_key(&dev->mt76, vif, &msta->deflink.bip,
-				      key, MCU_UNI_CMD(STA_REC_UPDATE),
+				      key, MCU_EXT_CMD(STA_REC_UPDATE),
 				      &msta->deflink.wcid, cmd);
 	if (err)
 		goto out;
@@ -552,7 +584,7 @@ static int mt7921_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 	    key->cipher == WLAN_CIPHER_SUITE_WEP40)
 		err = mt76_connac_mcu_add_key(&dev->mt76, vif,
 					      &mvif->wep_sta->deflink.bip,
-					      key, MCU_UNI_CMD(STA_REC_UPDATE),
+					      key, MCU_EXT_CMD(STA_REC_UPDATE),
 					      &mvif->wep_sta->deflink.wcid, cmd);
 out:
 	mt792x_mutex_release(dev);
@@ -619,7 +651,10 @@ static int mt7921_config(struct ieee80211_hw *hw, u32 changed)
 	struct mt792x_phy *phy = mt792x_hw_phy(hw);
 	int ret = 0;
 
+    printk(KERN_INFO "mt7921_config: changed=0x%x\n", changed);
+
 	if (changed & IEEE80211_CONF_CHANGE_CHANNEL) {
+        printk(KERN_INFO "mt7921_config: IEEE80211_CONF_CHANGE_CHANNEL\n");
 		ieee80211_stop_queues(hw);
 		ret = mt7921_set_channel(phy);
 		if (ret)
@@ -630,12 +665,14 @@ static int mt7921_config(struct ieee80211_hw *hw, u32 changed)
 	mt792x_mutex_acquire(dev);
 
 	if (changed & IEEE80211_CONF_CHANGE_POWER) {
+        printk(KERN_INFO "mt7921_config: IEEE80211_CONF_CHANGE_POWER\n");
 		ret = mt7921_set_tx_sar_pwr(hw, NULL);
 		if (ret)
 			goto out;
 	}
 
 	if (changed & IEEE80211_CONF_CHANGE_MONITOR) {
+        printk(KERN_INFO "mt7921_config: IEEE80211_CONF_CHANGE_MONITOR\n");
 		ieee80211_iterate_active_interfaces(hw,
 						    IEEE80211_IFACE_ITER_RESUME_ALL,
 						    mt7921_sniffer_interface_iter, dev);
@@ -669,6 +706,9 @@ static void mt7921_configure_filter(struct ieee80211_hw *hw,
 	MT7921_FILTER(FIF_CONTROL, CONTROL);
 	MT7921_FILTER(FIF_OTHER_BSS, OTHER_BSS);
 
+    printk(KERN_INFO "mt7921_configure_filter: changed_flags=0x%x, total_flags=0x%x\n",
+        changed_flags, *total_flags);
+
 	mt792x_mutex_acquire(dev);
 	mt7921_mcu_set_rxfilter(dev, flags, 0, 0);
 	mt792x_mutex_release(dev);
@@ -684,9 +724,12 @@ static void mt7921_bss_info_changed(struct ieee80211_hw *hw,
 	struct mt792x_phy *phy = mt792x_hw_phy(hw);
 	struct mt792x_dev *dev = mt792x_hw_dev(hw);
 
+	printk(KERN_INFO "mt7921_bss_info_changed: changed=0x%llx\n", changed);
+
 	mt792x_mutex_acquire(dev);
 
 	if (changed & BSS_CHANGED_ERP_SLOT) {
+		printk(KERN_INFO "mt7921: BSS_CHANGED_ERP_SLOT\n");
 		int slottime = info->use_short_slot ? 9 : 20;
 
 		if (slottime != phy->slottime) {
@@ -696,35 +739,49 @@ static void mt7921_bss_info_changed(struct ieee80211_hw *hw,
 	}
 
 	if (changed & (BSS_CHANGED_BEACON |
-		       BSS_CHANGED_BEACON_ENABLED))
+		       BSS_CHANGED_BEACON_ENABLED)){
+		printk(KERN_INFO "mt7921: BSS_CHANGED_BEACON\n");
 		mt7921_mcu_uni_add_beacon_offload(dev, hw, vif,
 						  info->enable_beacon);
+	}
 
 	/* ensure that enable txcmd_mode after bss_info */
-	if (changed & (BSS_CHANGED_QOS | BSS_CHANGED_BEACON_ENABLED))
+	if (changed & (BSS_CHANGED_QOS | BSS_CHANGED_BEACON_ENABLED)){
+		printk(KERN_INFO "mt7921: BSS_CHANGED_QOS\n");
 		mt7921_mcu_set_tx(dev, vif);
+	}
 
-	if (changed & BSS_CHANGED_PS)
-		mt7921_mcu_uni_bss_ps(dev, vif);
+	if (changed & BSS_CHANGED_PS){
+		printk(KERN_INFO "mt7921: BSS_CHANGED_PS\n");
+		//mt7921_mcu_uni_bss_ps(dev, vif);
+		mt76_connac_mcu_set_vif_ps(&dev->mt76, vif);
+	}
 
-	if (changed & BSS_CHANGED_CQM)
+	if (changed & BSS_CHANGED_CQM){
+		printk(KERN_INFO "mt7921: BSS_CHANGED_CQM, cqm_rssi_thold=%d\n",
+		       info->cqm_rssi_thold);
 		mt7921_mcu_set_rssimonitor(dev, vif);
+	}
 
 	if (changed & BSS_CHANGED_ASSOC) {
+		printk(KERN_INFO "mt7921: BSS_CHANGED_ASSOC\n");
 		mt7921_mcu_sta_update(dev, NULL, vif, true,
 				      MT76_STA_INFO_STATE_ASSOC);
 		mt7921_mcu_set_beacon_filter(dev, vif, vif->cfg.assoc);
 	}
 
 	if (changed & BSS_CHANGED_ARP_FILTER) {
+		printk(KERN_INFO "mt7921: BSS_CHANGED_ARP_FILTER\n");
 		struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 
-		mt76_connac_mcu_update_arp_filter(&dev->mt76, &mvif->bss_conf.mt76,
-						  info);
+		printk(KERN_INFO "should change arp filter here.. vif %pM\n", vif->addr);
+		// mt76_connac_mcu_update_arp_filter(&dev->mt76, &mvif->bss_conf.mt76,
+		// 				  info);
 	}
 
 	mt792x_mutex_release(dev);
 }
+
 
 static void
 mt7921_calc_vif_num(void *priv, u8 *mac, struct ieee80211_vif *vif)
@@ -840,9 +897,15 @@ void mt7921_mac_sta_assoc(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 
 	mt792x_mutex_acquire(dev);
 
-	if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls)
-		mt76_connac_mcu_uni_add_bss(&dev->mphy, vif, &mvif->sta.deflink.wcid,
-					    true, mvif->bss_conf.mt76.ctx);
+	if (vif->type == NL80211_IFTYPE_STATION && !sta->tdls){
+		//mt76_connac_mcu_uni_add_bss(&dev->mphy, vif, &mvif->sta.deflink.wcid,
+		//			    true, mvif->bss_conf.mt76.ctx);
+		printk(KERN_INFO "mt7921_mac_sta_assoc: ADD_BSS_INFO\n");
+        u32 ret = mt7921_mcu_add_bss_info(mvif->phy, vif, &mvif->bss_conf.mt76,
+                 true);
+        printk(KERN_INFO "mt7921_mac_sta_assoc: mcu add bss info ret=%u\n", ret);
+	}
+		
 
 	ewma_avg_signal_init(&msta->deflink.avg_ack_signal);
 
@@ -874,10 +937,15 @@ void mt7921_mac_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 
 		mvif->wep_sta = NULL;
 		ewma_rssi_init(&mvif->bss_conf.rssi);
-		if (!sta->tdls)
-			mt76_connac_mcu_uni_add_bss(&dev->mphy, vif,
-						    &mvif->sta.deflink.wcid, false,
-						    mvif->bss_conf.mt76.ctx);
+		if (!sta->tdls){
+			// mt76_connac_mcu_uni_add_bss(&dev->mphy, vif,
+			// 			    &mvif->sta.deflink.wcid, false,
+			// 			    mvif->bss_conf.mt76.ctx);
+			printk(KERN_INFO "mt7921_mac_sta_remove: ADD_BSS_INFO\n");
+            u32 ret = mt7921_mcu_add_bss_info(mvif->phy, vif, &mvif->bss_conf.mt76,
+                 true);
+            printk(KERN_INFO "mt7921_mac_sta_remove: mcu add bss info ret=%u\n", ret);
+		}
 	}
 
 	spin_lock_bh(&dev->mt76.sta_poll_lock);
@@ -1097,7 +1165,7 @@ mt7921_set_antenna(struct ieee80211_hw *hw, u32 tx_ant, u32 rx_ant)
 	return 0;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM2
 static int mt7921_suspend(struct ieee80211_hw *hw,
 			  struct cfg80211_wowlan *wowlan)
 {
@@ -1172,12 +1240,12 @@ static void mt7921_sta_set_decap_offload(struct ieee80211_hw *hw,
 		clear_bit(MT_WCID_FLAG_HDR_TRANS, &msta->deflink.wcid.flags);
 
 	mt76_connac_mcu_sta_update_hdr_trans(&dev->mt76, vif, &msta->deflink.wcid,
-					     MCU_UNI_CMD(STA_REC_UPDATE));
+					     MCU_EXT_CMD(STA_REC_UPDATE));
 
 	mt792x_mutex_release(dev);
 }
 
-#if IS_ENABLED(CONFIG_IPV6)
+#if IS_ENABLED(CONFIG_IPV62)
 static void mt7921_ipv6_addr_change(struct ieee80211_hw *hw,
 				    struct ieee80211_vif *vif,
 				    struct inet6_dev *idev)
@@ -1295,8 +1363,12 @@ mt7921_start_ap(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 
 	mt792x_mutex_acquire(dev);
 
-	err = mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.deflink.wcid,
-					  true, mvif->bss_conf.mt76.ctx);
+	// err = mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.deflink.wcid,
+	// 				  true, mvif->bss_conf.mt76.ctx);
+	printk(KERN_INFO "mt7921_start_ap ADD_BSS_INFO\n");
+    err = mt7921_mcu_add_bss_info(phy, vif, &mvif->bss_conf.mt76, true);
+    printk(KERN_INFO "mt7921_start_ap ADD_BSS_INFO err=%d\n", err);
+	
 	if (err)
 		goto out;
 
@@ -1327,8 +1399,12 @@ mt7921_stop_ap(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 	if (err)
 		goto out;
 
-	mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.deflink.wcid, false,
-				    mvif->bss_conf.mt76.ctx);
+	// mt76_connac_mcu_uni_add_bss(phy->mt76, vif, &mvif->sta.deflink.wcid, false,
+	// 			    mvif->bss_conf.mt76.ctx);
+
+	printk(KERN_INFO "mt7921_stop_ap ADD_BSS_INFO\n");
+    err = mt7921_mcu_add_bss_info(phy, vif, &mvif->bss_conf.mt76, false);
+    printk(KERN_INFO "mt7921_stop_ap ADD_BSS_INFO err=%d\n", err);
 
 out:
 	mt792x_mutex_release(dev);
@@ -1411,7 +1487,7 @@ const struct ieee80211_ops mt7921_ops = {
 	.sta_pre_rcu_remove = mt76_sta_pre_rcu_remove,
 	.set_key = mt7921_set_key,
 	.sta_set_decap_offload = mt7921_sta_set_decap_offload,
-#if IS_ENABLED(CONFIG_IPV6)
+#if IS_ENABLED(CONFIG_IPV62)
 	.ipv6_addr_change = mt7921_ipv6_addr_change,
 #endif /* CONFIG_IPV6 */
 	.ampdu_action = mt7921_ampdu_action,
@@ -1437,7 +1513,7 @@ const struct ieee80211_ops mt7921_ops = {
 	.sched_scan_stop = mt7921_stop_sched_scan,
 	CFG80211_TESTMODE_CMD(mt7921_testmode_cmd)
 	CFG80211_TESTMODE_DUMP(mt7921_testmode_dump)
-#ifdef CONFIG_PM
+#ifdef CONFIG_PM2
 	.suspend = mt7921_suspend,
 	.resume = mt7921_resume,
 	.set_wakeup = mt792x_set_wakeup,

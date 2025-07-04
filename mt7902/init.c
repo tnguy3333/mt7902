@@ -228,18 +228,21 @@ static void mt7921_init_work(struct work_struct *work)
 
 	ret = mt76_register_device(&dev->mt76, true, mt76_rates,
 				   ARRAY_SIZE(mt76_rates));
+	printk(KERN_DEBUG "init_work: register device ret %d\n", ret);
 	if (ret) {
 		dev_err(dev->mt76.dev, "register device failed\n");
 		return;
 	}
 
 	ret = mt7921_init_debugfs(dev);
+	printk(KERN_DEBUG "init_work: init debugfs ret %d\n", ret);
 	if (ret) {
 		dev_err(dev->mt76.dev, "register debugfs failed\n");
 		return;
 	}
 
 	ret = mt7921_thermal_init(&dev->phy);
+	printk(KERN_DEBUG "init_work: thermal init ret %d\n", ret);
 	if (ret) {
 		dev_err(dev->mt76.dev, "thermal init failed\n");
 		return;
@@ -273,7 +276,7 @@ int mt7921_register_device(struct mt792x_dev *dev)
 	INIT_DELAYED_WORK(&dev->mphy.mac_work, mt792x_mac_work);
 	INIT_DELAYED_WORK(&dev->phy.scan_work, mt7921_scan_work);
 	INIT_DELAYED_WORK(&dev->coredump.work, mt7921_coredump_work);
-#if IS_ENABLED(CONFIG_IPV6)
+#if IS_ENABLED(CONFIG_IPV62)
 	INIT_WORK(&dev->ipv6_ns_work, mt7921_set_ipv6_ns_work);
 	skb_queue_head_init(&dev->ipv6_ns_list);
 #endif
