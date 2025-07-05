@@ -40,7 +40,8 @@ Check kernel logs:
 - [x] Fix failed to start WM firmware
 - [x] Use EXT commands for dev_info_update, bss_info_update, sta_rec_update
 - [x] WPA handshake
-- [ ] Connect to wifi
+- [ ] Firmware decryption
+- [ ] Connect to wifi (stable)
 
 Lower priority:
 - [ ] Fix power saving mode / suspend
