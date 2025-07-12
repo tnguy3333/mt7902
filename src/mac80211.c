@@ -2,6 +2,7 @@
 /*
  * Copyright (C) 2016 Felix Fietkau <nbd@nbd.name>
  */
+#include <linux/version.h>
 #include <linux/sched.h>
 #include <linux/of.h>
 #include "mt76.h"
@@ -1559,6 +1560,9 @@ void mt76_wcid_cleanup(struct mt76_dev *dev, struct mt76_wcid *wcid)
 EXPORT_SYMBOL_GPL(mt76_wcid_cleanup);
 
 int mt76_get_txpower(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)	
+	unsigned int link_id,
+#endif
 		     int *dbm)
 {
 	struct mt76_phy *phy = hw->priv;

@@ -6,6 +6,7 @@
 #ifndef __MT76_H
 #define __MT76_H
 
+#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/spinlock.h>
@@ -1418,6 +1419,9 @@ void mt76_sta_pre_rcu_remove(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 int mt76_get_min_avg_rssi(struct mt76_dev *dev, bool ext_phy);
 
 int mt76_get_txpower(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 15, 0)	
+	unsigned int link_id,
+#endif	
 		     int *dbm);
 int mt76_init_sar_power(struct ieee80211_hw *hw,
 			const struct cfg80211_sar_specs *sar);
