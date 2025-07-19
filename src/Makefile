@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 obj-m += mt76.o
-obj-$(CONFIG_MT76_CONNAC_LIB) += mt76-connac-lib.o
-obj-$(CONFIG_MT792x_LIB) += mt792x-lib.o
+obj-m += mt76-connac-lib.o
+obj-m += mt792x-lib.o
 
 mt76-y := \
 	mmio.o util.o trace.o dma.o mac80211.o debugfs.o eeprom.o \
@@ -20,3 +20,9 @@ mt792x-lib-y := mt792x_core.o mt792x_mac.o mt792x_trace.o \
 mt792x-lib-$(CONFIG_ACPI) += mt792x_acpi_sar.o
 
 obj-m += mt7902/
+
+all:
+	$(MAKE) -C /lib/modules/`uname -r`/build/ M=`pwd` modules
+
+clean:
+	$(MAKE) -C /lib/modules/`uname -r`/build/ M=`pwd` clean
