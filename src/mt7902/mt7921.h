@@ -107,8 +107,8 @@ struct mt7921_sdio_intr {
 enum mt7921_txq_id {
 	MT7921_TXQ_BAND0,
 	MT7921_TXQ_BAND1,
-	MT7921_TXQ_FWDL = 16,
-	MT7921_TXQ_MCU_WM,
+	MT7921_TXQ_MCU_WM = 15,
+	MT7921_TXQ_FWDL,
 };
 
 enum mt7921_rxq_id {
@@ -188,6 +188,8 @@ u32 mt7921_reg_map(struct mt792x_dev *dev, u32 addr);
 int __mt7921_start(struct mt792x_phy *phy);
 int mt7921_register_device(struct mt792x_dev *dev);
 void mt7921_unregister_device(struct mt792x_dev *dev);
+int mt7902_firmware_state(struct mt792x_dev *dev, bool wa);
+int mt7902_load_firmware(struct mt792x_dev *dev);
 int mt7921_run_firmware(struct mt792x_dev *dev);
 int mt7921_set_channel(struct mt76_phy *mphy);
 int mt7921_mcu_set_bss_pm(struct mt792x_dev *dev, struct ieee80211_vif *vif,
