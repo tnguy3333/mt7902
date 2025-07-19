@@ -339,5 +339,5 @@ void mt7921_roc_abort_sync(struct mt792x_dev *dev);
 int mt7921_mcu_set_rssimonitor(struct mt792x_dev *dev, struct ieee80211_vif *vif);
 int mt7902_mcu_add_dev_info(struct mt76_phy *phy,
 			    struct ieee80211_bss_conf *bss_conf,
-                struct mt76_vif *mvif, bool enable);
+                struct mt76_vif_link *mvif, bool enable);
 #endif
