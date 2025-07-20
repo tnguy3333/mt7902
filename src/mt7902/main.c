@@ -519,6 +519,12 @@ static int mt7921_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 	    !(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
 		return -EOPNOTSUPP;
 
+	// Returning not supp here forces software decryption, because hardware decryption is currently not working
+	if(key->cipher == WLAN_CIPHER_SUITE_CCMP){
+		printk(KERN_INFO "set_key: falling back to software decryption, returning not supp for PTK/GTK\n");
+		return -EOPNOTSUPP;
+	}
+
 	/* fall back to sw encryption for unsupported ciphers */
 	switch (key->cipher) {
 	case WLAN_CIPHER_SUITE_AES_CMAC:
