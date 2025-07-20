@@ -14,16 +14,16 @@
 
 static const struct usb_device_id mt7902u_device_table[] = {
 	{ USB_DEVICE_AND_INTERFACE_INFO(0x0e8d, 0x7961, 0xff, 0xff, 0xff),
-		.driver_info = (kernel_ulong_t)MT7921_FIRMWARE_WM },
+		.driver_info = (kernel_ulong_t)MT7902_FIRMWARE_WM },
 	/* Comfast CF-952AX */
 	{ USB_DEVICE_AND_INTERFACE_INFO(0x3574, 0x6211, 0xff, 0xff, 0xff),
-		.driver_info = (kernel_ulong_t)MT7921_FIRMWARE_WM },
+		.driver_info = (kernel_ulong_t)MT7902_FIRMWARE_WM },
 	/* Netgear, Inc. [A8000,AXE3000] */
 	{ USB_DEVICE_AND_INTERFACE_INFO(0x0846, 0x9060, 0xff, 0xff, 0xff),
-		.driver_info = (kernel_ulong_t)MT7921_FIRMWARE_WM },
+		.driver_info = (kernel_ulong_t)MT7902_FIRMWARE_WM },
 	/* TP-Link TXE50UH */
 	{ USB_DEVICE_AND_INTERFACE_INFO(0x35bc, 0x0107, 0xff, 0xff, 0xff),
-		.driver_info = (kernel_ulong_t)MT7921_FIRMWARE_WM },
+		.driver_info = (kernel_ulong_t)MT7902_FIRMWARE_WM },
 	{ },
 };
 
@@ -322,8 +322,8 @@ failed:
 #endif /* CONFIG_PM */
 
 MODULE_DEVICE_TABLE(usb, mt7902u_device_table);
-MODULE_FIRMWARE(MT7921_FIRMWARE_WM);
-MODULE_FIRMWARE(MT7921_ROM_PATCH);
+MODULE_FIRMWARE(MT7902_FIRMWARE_WM);
+MODULE_FIRMWARE(MT7902_ROM_PATCH);
 
 static struct usb_driver mt7902u_driver = {
 	.name		= KBUILD_MODNAME,
@@ -340,6 +340,6 @@ static struct usb_driver mt7902u_driver = {
 };
 module_usb_driver(mt7902u_driver);
 
-MODULE_DESCRIPTION("MediaTek MT7921U (USB) wireless driver");
+MODULE_DESCRIPTION("MediaTek MT7902U (USB) wireless driver");
 MODULE_AUTHOR("Lorenzo Bianconi <lorenzo@kernel.org>");
 MODULE_LICENSE("Dual BSD/GPL");

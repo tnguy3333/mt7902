@@ -79,7 +79,7 @@ static int mt7902_mcu_read_eeprom(struct mt792x_dev *dev, u32 offset, u8 *val)
 {
 	struct mt7902_mcu_eeprom_info *res, req = {
 		.addr = cpu_to_le32(round_down(offset,
-				    MT7921_EEPROM_BLOCK_SIZE)),
+				    MT7902_EEPROM_BLOCK_SIZE)),
 	};
 	struct sk_buff *skb;
 	int ret;
@@ -90,7 +90,7 @@ static int mt7902_mcu_read_eeprom(struct mt792x_dev *dev, u32 offset, u8 *val)
 		return ret;
 
 	res = (struct mt7902_mcu_eeprom_info *)skb->data;
-	*val = res->data[offset % MT7921_EEPROM_BLOCK_SIZE];
+	*val = res->data[offset % MT7902_EEPROM_BLOCK_SIZE];
 	dev_kfree_skb(skb);
 
 	return 0;
@@ -152,7 +152,7 @@ mt7902_mcu_uni_roc_event(struct mt792x_dev *dev, struct sk_buff *skb)
 	/* should never happen */
 	WARN_ON_ONCE((le16_to_cpu(grant->tag) != UNI_EVENT_ROC_GRANT));
 
-	if (grant->reqtype == MT7921_ROC_REQ_ROC)
+	if (grant->reqtype == MT7902_ROC_REQ_ROC)
 		ieee80211_ready_on_channel(dev->mt76.phy.hw);
 
 	dev->phy.roc_grant = true;
@@ -479,7 +479,7 @@ static int mt7902_load_clc(struct mt792x_dev *dev, const char *fw_name)
 			continue;
 
 		/* header content sanity */
-		if (clc->idx == MT7921_CLC_POWER &&
+		if (clc->idx == MT7902_CLC_POWER &&
 		    u8_get_bits(clc->type, MT_EE_HW_TYPE_ENCAP) != hw_encap)
 			continue;
 
@@ -1140,8 +1140,8 @@ int mt7902_mcu_set_beacon_filter(struct mt792x_dev *dev,
 				 struct ieee80211_vif *vif,
 				 bool enable)
 {
-#define MT7921_FIF_BIT_CLR		BIT(1)
-#define MT7921_FIF_BIT_SET		BIT(0)
+#define MT7902_FIF_BIT_CLR		BIT(1)
+#define MT7902_FIF_BIT_SET		BIT(0)
 	int err;
 
 	if (enable) {
@@ -1150,7 +1150,7 @@ int mt7902_mcu_set_beacon_filter(struct mt792x_dev *dev,
 		//	return err;
 
 		err = mt7902_mcu_set_rxfilter(dev, 0,
-					      MT7921_FIF_BIT_SET,
+					      MT7902_FIF_BIT_SET,
 					      MT_WF_RFCR_DROP_OTHER_BEACON);
 		if (err)
 			return err;
@@ -1163,7 +1163,7 @@ int mt7902_mcu_set_beacon_filter(struct mt792x_dev *dev,
 		return err;
 
 	err = mt7902_mcu_set_rxfilter(dev, 0,
-				      MT7921_FIF_BIT_CLR,
+				      MT7902_FIF_BIT_CLR,
 				      MT_WF_RFCR_DROP_OTHER_BEACON);
 	if (err)
 		return err;

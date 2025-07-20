@@ -17,7 +17,7 @@ mt7902s_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 			 int cmd, int *seq)
 {
 	struct mt792x_dev *dev = container_of(mdev, struct mt792x_dev, mt76);
-	enum mt7902_sdio_pkt_type type = MT7921_SDIO_CMD;
+	enum mt7902_sdio_pkt_type type = MT7902_SDIO_CMD;
 	enum mt76_mcuq_id txq = MT_MCUQ_WM;
 	int ret, pad;
 
@@ -36,7 +36,7 @@ mt7902s_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
 	mdev->mcu.timeout = 3 * HZ;
 
 	if (cmd == MCU_CMD(FW_SCATTER))
-		type = MT7921_SDIO_FWDL;
+		type = MT7902_SDIO_FWDL;
 
 	mt792x_skb_add_usb_sdio_hdr(dev, skb, type);
 	pad = round_up(skb->len, 4) - skb->len;

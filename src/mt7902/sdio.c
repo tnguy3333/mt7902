@@ -18,7 +18,7 @@
 
 static const struct sdio_device_id mt7902s_table[] = {
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_MEDIATEK, 0x7901),
-		.driver_data = (kernel_ulong_t)MT7921_FIRMWARE_WM },
+		.driver_data = (kernel_ulong_t)MT7902_FIRMWARE_WM },
 	{ }	/* Terminating entry */
 };
 
@@ -313,8 +313,8 @@ failed:
 }
 
 MODULE_DEVICE_TABLE(sdio, mt7902s_table);
-MODULE_FIRMWARE(MT7921_FIRMWARE_WM);
-MODULE_FIRMWARE(MT7921_ROM_PATCH);
+MODULE_FIRMWARE(MT7902_FIRMWARE_WM);
+MODULE_FIRMWARE(MT7902_ROM_PATCH);
 
 static DEFINE_SIMPLE_DEV_PM_OPS(mt7902s_pm_ops, mt7902s_suspend, mt7902s_resume);
 
@@ -326,6 +326,6 @@ static struct sdio_driver mt7902s_driver = {
 	.drv.pm		= pm_sleep_ptr(&mt7902s_pm_ops),
 };
 module_sdio_driver(mt7902s_driver);
-MODULE_DESCRIPTION("MediaTek MT7921S (SDIO) wireless driver");
+MODULE_DESCRIPTION("MediaTek MT7902S (SDIO) wireless driver");
 MODULE_AUTHOR("Sean Wang <sean.wang@mediatek.com>");
 MODULE_LICENSE("Dual BSD/GPL");

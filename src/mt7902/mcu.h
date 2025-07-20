@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: ISC */
 /* Copyright (C) 2020 MediaTek Inc. */
 
-#ifndef __MT7921_MCU_H
-#define __MT7921_MCU_H
+#ifndef __MT7902_MCU_H
+#define __MT7902_MCU_H
 
 #include "../mt76_connac_mcu.h"
 
@@ -41,7 +41,7 @@ enum {
 struct mt7902_mcu_eeprom_info {
 	__le32 addr;
 	__le32 valid;
-	u8 data[MT7921_EEPROM_BLOCK_SIZE];
+	u8 data[MT7902_EEPROM_BLOCK_SIZE];
 } __packed;
 
 #define MT_RA_RATE_NSS			GENMASK(8, 6)
@@ -86,11 +86,11 @@ enum {
 };
 
 enum {
-	MT7921_TM_NORMAL,
-	MT7921_TM_TESTMODE,
-	MT7921_TM_ICAP,
-	MT7921_TM_ICAP_OVERLAP,
-	MT7921_TM_WIFISPECTRUM,
+	MT7902_TM_NORMAL,
+	MT7902_TM_TESTMODE,
+	MT7902_TM_ICAP,
+	MT7902_TM_ICAP_OVERLAP,
+	MT7902_TM_WIFISPECTRUM,
 };
 
 struct mt7902_rftest_cmd {

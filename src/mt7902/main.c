@@ -457,7 +457,7 @@ static int mt7902_remain_on_channel(struct ieee80211_hw *hw,
 	int err;
 
 	mt792x_mutex_acquire(phy->dev);
-	err = mt7902_set_roc(phy, mvif, chan, duration, MT7921_ROC_REQ_ROC);
+	err = mt7902_set_roc(phy, mvif, chan, duration, MT7902_ROC_REQ_ROC);
 	mt792x_mutex_release(phy->dev);
 
 	return err;
@@ -673,22 +673,22 @@ static void mt7902_configure_filter(struct ieee80211_hw *hw,
 				    unsigned int *total_flags,
 				    u64 multicast)
 {
-#define MT7921_FILTER_FCSFAIL    BIT(2)
-#define MT7921_FILTER_CONTROL    BIT(5)
-#define MT7921_FILTER_OTHER_BSS  BIT(6)
-#define MT7921_FILTER_ENABLE     BIT(31)
+#define MT7902_FILTER_FCSFAIL    BIT(2)
+#define MT7902_FILTER_CONTROL    BIT(5)
+#define MT7902_FILTER_OTHER_BSS  BIT(6)
+#define MT7902_FILTER_ENABLE     BIT(31)
 
 	struct mt792x_dev *dev = mt792x_hw_dev(hw);
-	u32 flags = MT7921_FILTER_ENABLE;
+	u32 flags = MT7902_FILTER_ENABLE;
 
-#define MT7921_FILTER(_fif, _type) do {			\
+#define MT7902_FILTER(_fif, _type) do {			\
 		if (*total_flags & (_fif))		\
-			flags |= MT7921_FILTER_##_type;	\
+			flags |= MT7902_FILTER_##_type;	\
 	} while (0)
 
-	MT7921_FILTER(FIF_FCSFAIL, FCSFAIL);
-	MT7921_FILTER(FIF_CONTROL, CONTROL);
-	MT7921_FILTER(FIF_OTHER_BSS, OTHER_BSS);
+	MT7902_FILTER(FIF_FCSFAIL, FCSFAIL);
+	MT7902_FILTER(FIF_CONTROL, CONTROL);
+	MT7902_FILTER(FIF_OTHER_BSS, OTHER_BSS);
 
 	mt792x_mutex_acquire(dev);
 	mt7902_mcu_set_rxfilter(dev, flags, 0, 0);
@@ -1435,7 +1435,7 @@ static void mt7902_mgd_prepare_tx(struct ieee80211_hw *hw,
 
 	mt792x_mutex_acquire(dev);
 	mt7902_set_roc(mvif->phy, mvif, mvif->bss_conf.mt76.ctx->def.chan, duration,
-		       MT7921_ROC_REQ_JOIN);
+		       MT7902_ROC_REQ_JOIN);
 	mt792x_mutex_release(dev);
 }
 
@@ -1611,6 +1611,6 @@ const struct ieee80211_ops mt7902_ops = {
 };
 EXPORT_SYMBOL_GPL(mt7902_ops);
 
-MODULE_DESCRIPTION("MediaTek MT7921 core driver");
+MODULE_DESCRIPTION("MediaTek MT7902 core driver");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Sean Wang <sean.wang@mediatek.com>");

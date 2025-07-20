@@ -4,14 +4,14 @@
 #include "mcu.h"
 
 enum mt7902_testmode_attr {
-	MT7921_TM_ATTR_UNSPEC,
-	MT7921_TM_ATTR_SET,
-	MT7921_TM_ATTR_QUERY,
-	MT7921_TM_ATTR_RSP,
+	MT7902_TM_ATTR_UNSPEC,
+	MT7902_TM_ATTR_SET,
+	MT7902_TM_ATTR_QUERY,
+	MT7902_TM_ATTR_RSP,
 
 	/* keep last */
-	NUM_MT7921_TM_ATTRS,
-	MT7921_TM_ATTR_MAX = NUM_MT7921_TM_ATTRS - 1,
+	NUM_MT7902_TM_ATTRS,
+	MT7902_TM_ATTR_MAX = NUM_MT7902_TM_ATTRS - 1,
 };
 
 struct mt7902_tm_cmd {
@@ -25,9 +25,9 @@ struct mt7902_tm_evt {
 	u32 param1;
 };
 
-static const struct nla_policy mt7902_tm_policy[NUM_MT7921_TM_ATTRS] = {
-	[MT7921_TM_ATTR_SET] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7902_tm_cmd)),
-	[MT7921_TM_ATTR_QUERY] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7902_tm_cmd)),
+static const struct nla_policy mt7902_tm_policy[NUM_MT7902_TM_ATTRS] = {
+	[MT7902_TM_ATTR_SET] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7902_tm_cmd)),
+	[MT7902_TM_ATTR_QUERY] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7902_tm_cmd)),
 };
 
 static int
@@ -46,7 +46,7 @@ mt7902_tm_set(struct mt792x_dev *dev, struct mt7902_tm_cmd *req)
 	mutex_lock(&dev->mt76.mutex);
 
 	if (req->action == TM_SWITCH_MODE) {
-		if (req->param0 == MT7921_TM_NORMAL)
+		if (req->param0 == MT7902_TM_NORMAL)
 			normal = true;
 		else
 			testmode = true;
@@ -126,18 +126,18 @@ int mt7902_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		return err;
 
 	if (tb[MT76_TM_ATTR_DRV_DATA]) {
-		struct nlattr *drv_tb[NUM_MT7921_TM_ATTRS], *data;
+		struct nlattr *drv_tb[NUM_MT7902_TM_ATTRS], *data;
 		int ret;
 
 		data = tb[MT76_TM_ATTR_DRV_DATA];
 		ret = nla_parse_nested_deprecated(drv_tb,
-						  MT7921_TM_ATTR_MAX,
+						  MT7902_TM_ATTR_MAX,
 						  data, mt7902_tm_policy,
 						  NULL);
 		if (ret)
 			return ret;
 
-		data = drv_tb[MT7921_TM_ATTR_SET];
+		data = drv_tb[MT7902_TM_ATTR_SET];
 		if (data)
 			return mt7902_tm_set(phy->dev, nla_data(data));
 	}
@@ -167,18 +167,18 @@ int mt7902_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
 		return err;
 
 	if (tb[MT76_TM_ATTR_DRV_DATA]) {
-		struct nlattr *drv_tb[NUM_MT7921_TM_ATTRS], *data;
+		struct nlattr *drv_tb[NUM_MT7902_TM_ATTRS], *data;
 		int ret;
 
 		data = tb[MT76_TM_ATTR_DRV_DATA];
 		ret = nla_parse_nested_deprecated(drv_tb,
-						  MT7921_TM_ATTR_MAX,
+						  MT7902_TM_ATTR_MAX,
 						  data, mt7902_tm_policy,
 						  NULL);
 		if (ret)
 			return ret;
 
-		data = drv_tb[MT7921_TM_ATTR_QUERY];
+		data = drv_tb[MT7902_TM_ATTR_QUERY];
 		if (data) {
 			struct mt7902_tm_evt evt_resp;
 
@@ -187,7 +187,7 @@ int mt7902_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
 			if (err)
 				return err;
 
-			return nla_put(msg, MT7921_TM_ATTR_RSP,
+			return nla_put(msg, MT7902_TM_ATTR_RSP,
 				       sizeof(evt_resp), &evt_resp);
 		}
 	}
