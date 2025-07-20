@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: ISC
 
-#include "mt7921.h"
+#include "mt7902.h"
 #include "mcu.h"
 
-enum mt7921_testmode_attr {
+enum mt7902_testmode_attr {
 	MT7921_TM_ATTR_UNSPEC,
 	MT7921_TM_ATTR_SET,
 	MT7921_TM_ATTR_QUERY,
@@ -14,26 +14,26 @@ enum mt7921_testmode_attr {
 	MT7921_TM_ATTR_MAX = NUM_MT7921_TM_ATTRS - 1,
 };
 
-struct mt7921_tm_cmd {
+struct mt7902_tm_cmd {
 	u8 action;
 	u32 param0;
 	u32 param1;
 };
 
-struct mt7921_tm_evt {
+struct mt7902_tm_evt {
 	u32 param0;
 	u32 param1;
 };
 
-static const struct nla_policy mt7921_tm_policy[NUM_MT7921_TM_ATTRS] = {
-	[MT7921_TM_ATTR_SET] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7921_tm_cmd)),
-	[MT7921_TM_ATTR_QUERY] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7921_tm_cmd)),
+static const struct nla_policy mt7902_tm_policy[NUM_MT7921_TM_ATTRS] = {
+	[MT7921_TM_ATTR_SET] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7902_tm_cmd)),
+	[MT7921_TM_ATTR_QUERY] = NLA_POLICY_EXACT_LEN(sizeof(struct mt7902_tm_cmd)),
 };
 
 static int
-mt7921_tm_set(struct mt792x_dev *dev, struct mt7921_tm_cmd *req)
+mt7902_tm_set(struct mt792x_dev *dev, struct mt7902_tm_cmd *req)
 {
-	struct mt7921_rftest_cmd cmd = {
+	struct mt7902_rftest_cmd cmd = {
 		.action = req->action,
 		.param0 = cpu_to_le32(req->param0),
 		.param1 = cpu_to_le32(req->param1),
@@ -82,15 +82,15 @@ out:
 }
 
 static int
-mt7921_tm_query(struct mt792x_dev *dev, struct mt7921_tm_cmd *req,
-		struct mt7921_tm_evt *evt_resp)
+mt7902_tm_query(struct mt792x_dev *dev, struct mt7902_tm_cmd *req,
+		struct mt7902_tm_evt *evt_resp)
 {
-	struct mt7921_rftest_cmd cmd = {
+	struct mt7902_rftest_cmd cmd = {
 		.action = req->action,
 		.param0 = cpu_to_le32(req->param0),
 		.param1 = cpu_to_le32(req->param1),
 	};
-	struct mt7921_rftest_evt *evt;
+	struct mt7902_rftest_evt *evt;
 	struct sk_buff *skb;
 	int ret;
 
@@ -99,7 +99,7 @@ mt7921_tm_query(struct mt792x_dev *dev, struct mt7921_tm_cmd *req,
 	if (ret)
 		goto out;
 
-	evt = (struct mt7921_rftest_evt *)skb->data;
+	evt = (struct mt7902_rftest_evt *)skb->data;
 	evt_resp->param0 = le32_to_cpu(evt->param0);
 	evt_resp->param1 = le32_to_cpu(evt->param1);
 out:
@@ -108,7 +108,7 @@ out:
 	return ret;
 }
 
-int mt7921_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+int mt7902_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 			void *data, int len)
 {
 	struct nlattr *tb[NUM_MT76_TM_ATTRS];
@@ -132,20 +132,20 @@ int mt7921_testmode_cmd(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		data = tb[MT76_TM_ATTR_DRV_DATA];
 		ret = nla_parse_nested_deprecated(drv_tb,
 						  MT7921_TM_ATTR_MAX,
-						  data, mt7921_tm_policy,
+						  data, mt7902_tm_policy,
 						  NULL);
 		if (ret)
 			return ret;
 
 		data = drv_tb[MT7921_TM_ATTR_SET];
 		if (data)
-			return mt7921_tm_set(phy->dev, nla_data(data));
+			return mt7902_tm_set(phy->dev, nla_data(data));
 	}
 
 	return -EINVAL;
 }
 
-int mt7921_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
+int mt7902_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
 			 struct netlink_callback *cb, void *data, int len)
 {
 	struct nlattr *tb[NUM_MT76_TM_ATTRS];
@@ -173,16 +173,16 @@ int mt7921_testmode_dump(struct ieee80211_hw *hw, struct sk_buff *msg,
 		data = tb[MT76_TM_ATTR_DRV_DATA];
 		ret = nla_parse_nested_deprecated(drv_tb,
 						  MT7921_TM_ATTR_MAX,
-						  data, mt7921_tm_policy,
+						  data, mt7902_tm_policy,
 						  NULL);
 		if (ret)
 			return ret;
 
 		data = drv_tb[MT7921_TM_ATTR_QUERY];
 		if (data) {
-			struct mt7921_tm_evt evt_resp;
+			struct mt7902_tm_evt evt_resp;
 
-			err = mt7921_tm_query(phy->dev, nla_data(data),
+			err = mt7902_tm_query(phy->dev, nla_data(data),
 					      &evt_resp);
 			if (err)
 				return err;
