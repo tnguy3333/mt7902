@@ -850,6 +850,7 @@ bool mt7921_usb_sdio_tx_status_data(struct mt76_dev *mdev, u8 *update)
 EXPORT_SYMBOL_GPL(mt7921_usb_sdio_tx_status_data);
 
 #if IS_ENABLED(CONFIG_IPV6)
+/*
 void mt7921_set_ipv6_ns_work(struct work_struct *work)
 {
 	struct mt792x_dev *dev = container_of(work, struct mt792x_dev,
@@ -872,5 +873,5 @@ void mt7921_set_ipv6_ns_work(struct work_struct *work)
 
 	if (ret)
 		skb_queue_purge(&dev->ipv6_ns_list);
-}
+}*/
 #endif

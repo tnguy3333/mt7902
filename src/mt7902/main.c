@@ -732,10 +732,10 @@ static void mt7921_bss_info_changed(struct ieee80211_hw *hw,
 	}
 
 	if (changed & BSS_CHANGED_ARP_FILTER) {
-		struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
+		//struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 
-		mt76_connac_mcu_update_arp_filter(&dev->mt76, &mvif->bss_conf.mt76,
-						  info);
+		//mt76_connac_mcu_update_arp_filter(&dev->mt76, &mvif->bss_conf.mt76,
+		//				  info);
 	}
 
 	mt792x_mutex_release(dev);
@@ -1126,6 +1126,7 @@ mt7921_set_antenna(struct ieee80211_hw *hw, u32 tx_ant, u32 rx_ant)
 }
 
 #ifdef CONFIG_PM
+/*
 static int mt7921_suspend(struct ieee80211_hw *hw,
 			  struct cfg80211_wowlan *wowlan)
 {
@@ -1181,7 +1182,7 @@ static void mt7921_set_rekey_data(struct ieee80211_hw *hw,
 	mt792x_mutex_acquire(dev);
 	mt76_connac_mcu_update_gtk_rekey(hw, vif, data);
 	mt792x_mutex_release(dev);
-}
+}*/
 #endif /* CONFIG_PM */
 
 static void mt7921_sta_set_decap_offload(struct ieee80211_hw *hw,
@@ -1211,6 +1212,7 @@ static void mt7921_sta_set_decap_offload(struct ieee80211_hw *hw,
 }
 
 #if IS_ENABLED(CONFIG_IPV6)
+/*
 static void mt7921_ipv6_addr_change(struct ieee80211_hw *hw,
 				    struct ieee80211_vif *vif,
 				    struct inet6_dev *idev)
@@ -1234,8 +1236,8 @@ static void mt7921_ipv6_addr_change(struct ieee80211_hw *hw,
 		},
 		.arpns = {
 			.tag = cpu_to_le16(UNI_OFFLOAD_OFFLOAD_ND),
-			.mode = 2,  /* update */
-			.option = 1, /* update only */
+			.mode = 2,
+			.option = 1,
 		},
 	};
 
@@ -1267,7 +1269,7 @@ static void mt7921_ipv6_addr_change(struct ieee80211_hw *hw,
 	skb_queue_tail(&dev->ipv6_ns_list, skb);
 
 	ieee80211_queue_work(dev->mt76.hw, &dev->ipv6_ns_work);
-}
+}*/
 #endif
 
 int mt7921_set_tx_sar_pwr(struct ieee80211_hw *hw,
@@ -1552,7 +1554,7 @@ const struct ieee80211_ops mt7921_ops = {
 	.set_key = mt7921_set_key,
 	.sta_set_decap_offload = mt7921_sta_set_decap_offload,
 #if IS_ENABLED(CONFIG_IPV6)
-	.ipv6_addr_change = mt7921_ipv6_addr_change,
+	//.ipv6_addr_change = mt7921_ipv6_addr_change,
 #endif /* CONFIG_IPV6 */
 	.ampdu_action = mt7921_ampdu_action,
 	.set_rts_threshold = mt7921_set_rts_threshold,
@@ -1578,10 +1580,10 @@ const struct ieee80211_ops mt7921_ops = {
 	CFG80211_TESTMODE_CMD(mt7921_testmode_cmd)
 	CFG80211_TESTMODE_DUMP(mt7921_testmode_dump)
 #ifdef CONFIG_PM
-	.suspend = mt7921_suspend,
-	.resume = mt7921_resume,
-	.set_wakeup = mt792x_set_wakeup,
-	.set_rekey_data = mt7921_set_rekey_data,
+	//.suspend = mt7921_suspend,
+	//.resume = mt7921_resume,
+	//.set_wakeup = mt792x_set_wakeup,
+	//.set_rekey_data = mt7921_set_rekey_data,
 #endif /* CONFIG_PM */
 	.flush = mt792x_flush,
 	.set_sar_specs = mt7921_set_sar_specs,
