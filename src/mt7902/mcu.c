@@ -997,6 +997,7 @@ EXPORT_SYMBOL_GPL(mt7921_mcu_set_eeprom);
 
 int mt7921_mcu_uni_bss_ps(struct mt792x_dev *dev, struct ieee80211_vif *vif)
 {
+	printk(KERN_INFO "uni bss ps\n");
 	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 	struct {
 		struct {
@@ -1032,6 +1033,7 @@ int mt7921_mcu_uni_bss_ps(struct mt792x_dev *dev, struct ieee80211_vif *vif)
 				 &ps_req, sizeof(ps_req), true);
 }
 
+/*
 static int
 mt7921_mcu_uni_bss_bcnft(struct mt792x_dev *dev, struct ieee80211_vif *vif,
 			 bool enable)
@@ -1066,7 +1068,7 @@ mt7921_mcu_uni_bss_bcnft(struct mt792x_dev *dev, struct ieee80211_vif *vif,
 
 	return mt76_mcu_send_msg(&dev->mt76, MCU_UNI_CMD(BSS_INFO_UPDATE),
 				 &bcnft_req, sizeof(bcnft_req), true);
-}
+}*/
 
 int
 mt7921_mcu_set_bss_pm(struct mt792x_dev *dev, struct ieee80211_vif *vif,
@@ -1139,9 +1141,9 @@ int mt7921_mcu_set_beacon_filter(struct mt792x_dev *dev,
 	int err;
 
 	if (enable) {
-		err = mt7921_mcu_uni_bss_bcnft(dev, vif, true);
-		if (err)
-			return err;
+		//err = mt7921_mcu_uni_bss_bcnft(dev, vif, true);
+		//if (err)
+		//	return err;
 
 		err = mt7921_mcu_set_rxfilter(dev, 0,
 					      MT7921_FIF_BIT_SET,
@@ -1292,6 +1294,7 @@ mt7921_mcu_uni_add_beacon_offload(struct mt792x_dev *dev,
 				  struct ieee80211_vif *vif,
 				  bool enable)
 {
+	printk(KERN_INFO "uni beacon offload\n");
 	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 	struct mt76_wcid *wcid = &dev->mt76.global_wcid;
 	struct ieee80211_mutable_offsets offs;
@@ -1591,3 +1594,40 @@ int mt7902_mcu_add_dev_info(struct mt76_phy *phy,
 	return mt76_mcu_send_msg(dev, MCU_EXT_CMD(DEV_INFO_UPDATE),
 				 &data, sizeof(data), true);
 }
+
+int mt7902_mcu_add_bss_info(struct mt792x_phy *phy,
+			    struct ieee80211_vif *vif, int enable)
+{
+	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
+	struct mt792x_dev *dev = phy->dev;
+	struct sk_buff *skb;
+
+	skb = __mt76_connac_mcu_alloc_sta_req(&dev->mt76, &mvif->bss_conf.mt76, NULL,
+					      MT7902_BSS_UPDATE_MAX_SIZE);
+	if (IS_ERR(skb))
+		return PTR_ERR(skb);
+
+	/* bss_omac must be first */
+	if (enable)
+		mt76_connac_mcu_bss_omac_tlv(skb, vif);
+
+	mt76_connac_mcu_bss_basic_tlv(skb, vif, NULL, phy->mt76,
+				      mvif->sta.deflink.wcid.idx, enable);
+
+	if (vif->type == NL80211_IFTYPE_MONITOR)
+		goto out;
+
+	if (enable) {
+		//mt7902_mcu_bss_rfch_tlv(skb, vif, phy);
+		//mt7902_mcu_bss_bmc_tlv(skb, phy);
+		//mt7902_mcu_bss_ra_tlv(skb, vif, phy);
+		//mt7902_mcu_bss_hw_amsdu_tlv(skb);
+
+		//if (vif->bss_conf.he_support)
+	//		mt7902_mcu_bss_he_tlv(skb, vif, phy);
+	}
+out:
+	return mt76_mcu_skb_send_msg(&dev->mt76, skb,
+				     MCU_EXT_CMD(BSS_INFO_UPDATE), true);
+}
+

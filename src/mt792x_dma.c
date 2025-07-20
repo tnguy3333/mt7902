@@ -356,6 +356,7 @@ EXPORT_SYMBOL_GPL(mt792x_poll_rx);
 
 int mt792x_wfsys_reset(struct mt792x_dev *dev)
 {
+	printk(KERN_INFO "mt792x_wfsys_reset\n");
 	u32 addr = is_mt7921(&dev->mt76) ? 0x18000140 : 0x7c000140;
 
 	mt76_clear(dev, addr, WFSYS_SW_RST_B);

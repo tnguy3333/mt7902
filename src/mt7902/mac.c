@@ -630,7 +630,7 @@ mt7921_vif_connect_iter(void *priv, u8 *mac,
 {
 	struct mt792x_vif *mvif = (struct mt792x_vif *)vif->drv_priv;
 	struct mt792x_dev *dev = mvif->phy->dev;
-	struct ieee80211_hw *hw = mt76_hw(dev);
+	//struct ieee80211_hw *hw = mt76_hw(dev);
 
 	if (vif->type == NL80211_IFTYPE_STATION)
 		ieee80211_disconnect(vif, true);
@@ -648,11 +648,14 @@ mt7921_vif_connect_iter(void *priv, u8 *mac,
 	mt7921_mcu_set_tx(dev, vif);
 
 	if (vif->type == NL80211_IFTYPE_AP) {
-		mt76_connac_mcu_uni_add_bss(dev->phy.mt76, vif, &mvif->sta.deflink.wcid,
-					    true, NULL);
+		//mt76_connac_mcu_uni_add_bss(dev->phy.mt76, vif, &mvif->sta.deflink.wcid,
+		//			    true, NULL);
+
+		ret = mt7902_mcu_add_bss_info(mvif->phy, vif, true);
+		printk(KERN_DEBUG "vif_connect_iter: add bss info ret = %d\n", ret);
 		mt7921_mcu_sta_update(dev, NULL, vif, true,
 				      MT76_STA_INFO_STATE_NONE);
-		mt7921_mcu_uni_add_beacon_offload(dev, hw, vif, true);
+		//mt7921_mcu_uni_add_beacon_offload(dev, hw, vif, true);
 	}
 }
 
