@@ -559,8 +559,9 @@ static int mt7921_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 
 	mt76_wcid_key_setup(&dev->mt76, wcid, key);
 	err = mt76_connac_mcu_add_key(&dev->mt76, vif, &msta->deflink.bip,
-				      key, MCU_UNI_CMD(STA_REC_UPDATE),
+				      key, MCU_EXT_CMD(STA_REC_UPDATE),
 				      &msta->deflink.wcid, cmd);
+	printk(KERN_INFO "add key, ret = %d\n", err);
 	if (err)
 		goto out;
 
@@ -568,7 +569,7 @@ static int mt7921_set_key(struct ieee80211_hw *hw, enum set_key_cmd cmd,
 	    key->cipher == WLAN_CIPHER_SUITE_WEP40)
 		err = mt76_connac_mcu_add_key(&dev->mt76, vif,
 					      &mvif->wep_sta->deflink.bip,
-					      key, MCU_UNI_CMD(STA_REC_UPDATE),
+					      key, MCU_EXT_CMD(STA_REC_UPDATE),
 					      &mvif->wep_sta->deflink.wcid, cmd);
 out:
 	mt792x_mutex_release(dev);
@@ -902,7 +903,7 @@ void mt7921_mac_sta_remove(struct mt76_dev *mdev, struct ieee80211_vif *vif,
 			//mt76_connac_mcu_uni_add_bss(&dev->mphy, vif,
 			//			    &mvif->sta.deflink.wcid, false,
 			//			    mvif->bss_conf.mt76.ctx);
-			u32 ret = mt7902_mcu_add_bss_info(mvif->phy, vif, false);
+			u32 ret = mt7902_mcu_add_bss_info(mvif->phy, vif, true);
 			printk(KERN_INFO "mac_sta_remove: add bss info ret = %d\n", ret);
 		}
 	}
@@ -1201,8 +1202,10 @@ static void mt7921_sta_set_decap_offload(struct ieee80211_hw *hw,
 	else
 		clear_bit(MT_WCID_FLAG_HDR_TRANS, &msta->deflink.wcid.flags);
 
-	mt76_connac_mcu_sta_update_hdr_trans(&dev->mt76, vif, &msta->deflink.wcid,
-					     MCU_UNI_CMD(STA_REC_UPDATE));
+	u32 ret = mt76_connac_mcu_sta_update_hdr_trans(&dev->mt76, vif, &msta->deflink.wcid,
+					     MCU_EXT_CMD(STA_REC_UPDATE));
+
+	printk(KERN_INFO "decap_offload - update_hdr_trans sta rec update, ret = %d\n", ret);
 
 	mt792x_mutex_release(dev);
 }
