@@ -43,5 +43,5 @@ Check kernel logs:
 Lower priority:
 - [ ] Fix power saving mode / suspend
 - [ ] IPv6
-- [ ] Rename all functions from mt7921 to mt7902
+- [x] Rename all functions from mt7921 to mt7902
 - [ ] Clean up code
